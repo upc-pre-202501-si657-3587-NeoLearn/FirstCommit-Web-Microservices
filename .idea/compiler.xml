@@ -16,8 +16,8 @@
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.38/lombok-1.18.38.jar" />
           <entry name="$MAVEN_REPOSITORY$/org/springframework/boot/spring-boot-configuration-processor/3.5.0/spring-boot-configuration-processor-3.5.0.jar" />
         </processorPath>
-        <module name="iam-service" />
         <module name="memberships-service" />
+        <module name="iam-service" />
         <module name="projects-service" />
         <module name="roadmaps-service" />
         <module name="courses-service" />
