@@ -28,14 +28,5 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
     @Query("SELECT DISTINCT c FROM Course c JOIN c.enrolledStudents e WHERE e = :userId")
     List<Course> findCoursesByEnrolledUser(@Param("userId") String userId);
 
-    // Obtiene el progreso de un usuario en un curso específico
-    @Query(value = """
-    SELECT progress 
-    FROM courses_user_progress 
-    WHERE course_id = :courseId 
-    AND user_id = :userId
-    """, nativeQuery = true)
-    Optional<Integer> findUserProgress(
-            @Param("courseId") Long courseId,
-            @Param("userId") String userId);
+
 }

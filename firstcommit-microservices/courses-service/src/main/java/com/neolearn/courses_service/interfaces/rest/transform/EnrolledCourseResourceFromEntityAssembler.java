@@ -14,7 +14,7 @@ public class EnrolledCourseResourceFromEntityAssembler {
                 course.getInstructorId(),
                 course.isPublished(),
                 course.getAverageRating()
-                // Nota: Puedes añadir progress como nuevo campo si lo necesitas
+
         );
     }
 }

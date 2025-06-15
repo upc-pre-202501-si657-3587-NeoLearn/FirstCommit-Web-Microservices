@@ -4,8 +4,9 @@ import com.neolearn.courses_service.domain.model.aggregates.Course;
 import com.neolearn.courses_service.domain.model.queries.*;
 import com.neolearn.courses_service.domain.services.ICourseQueryService;
 import com.neolearn.courses_service.infrastructure.persistence.jpa.repositories.CourseRepository;
-import com.neolearn.courses_service.interfaces.rest.resources.CourseDetailsResource;
+import com.neolearn.courses_service.infrastructure.persistence.jpa.repositories.UserProgressRepository;
 import com.neolearn.courses_service.interfaces.rest.resources.CourseContentResource;
+import com.neolearn.courses_service.interfaces.rest.resources.CourseDetailsResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,13 +14,15 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-@Transactional(readOnly = true)
+@Transactional(readOnly = true) // readOnly = true es una optimización para consultas
 public class CourseQueryService implements ICourseQueryService {
 
     private final CourseRepository courseRepository;
+    private final UserProgressRepository userProgressRepository; // Inyectar el nuevo repositorio
 
-    public CourseQueryService(CourseRepository courseRepository) {
+    public CourseQueryService(CourseRepository courseRepository, UserProgressRepository userProgressRepository) {
         this.courseRepository = courseRepository;
+        this.userProgressRepository = userProgressRepository;
     }
 
     @Override
@@ -32,6 +35,7 @@ public class CourseQueryService implements ICourseQueryService {
 
     @Override
     public Optional<Course> handle(GetCourseByIdQuery query) {
+        // La validación en el record de la Query es preferible, pero aquí está bien también.
         if (query.courseId() == null || query.courseId() <= 0) {
             throw new IllegalArgumentException("Invalid course ID");
         }
@@ -40,7 +44,7 @@ public class CourseQueryService implements ICourseQueryService {
 
     @Override
     public List<Course> handle(GetEnrolledCoursesQuery query) {
-        if (query.userId() == null || query.userId().isEmpty()) {
+        if (query.userId() == null || query.userId().isBlank()) {
             throw new IllegalArgumentException("User ID cannot be null or empty");
         }
         return courseRepository.findCoursesByEnrolledUser(query.userId());
@@ -52,14 +56,20 @@ public class CourseQueryService implements ICourseQueryService {
             throw new IllegalArgumentException("Invalid course ID");
         }
 
+        // 1. Obtener el curso. Si no existe, lanzar excepción.
         Course course = courseRepository.findById(query.courseId())
-                .orElseThrow(() -> new IllegalArgumentException("Course not found"));
+                .orElseThrow(() -> new IllegalArgumentException("Course not found with id: " + query.courseId()));
 
+        // 2. Obtener el progreso del usuario (si se proporcionó un userId)
         Integer progress = null;
-        if (query.userId() != null && !query.userId().isEmpty()) {
-            progress = course.getUserProgress(query.userId()).orElse(null);
+        if (query.userId() != null && !query.userId().isBlank()) {
+            // Usamos el nuevo repositorio para obtener el progreso.
+            progress = userProgressRepository.findByCourseIdAndUserId(query.courseId(), query.userId())
+                    .map(userProgress -> userProgress.getProgress()) // Extraemos el valor int del progreso
+                    .orElse(null); // Si no hay registro, el progreso es nulo
         }
 
+        // 3. Ensamblar el recurso de detalles
         return new CourseDetailsResource(
                 course.getId(),
                 course.getTitle(),
@@ -69,7 +79,7 @@ public class CourseQueryService implements ICourseQueryService {
                 course.getImageUrl(),
                 course.isPublished(),
                 course.getAverageRating(),
-                progress,
+                progress, // Usamos la variable de progreso obtenida
                 new CourseContentResource(
                         course.getContent().getTheoryContent(),
                         course.getContent().getQuizContent(),
@@ -83,11 +93,12 @@ public class CourseQueryService implements ICourseQueryService {
         if (query.courseId() == null || query.courseId() <= 0) {
             throw new IllegalArgumentException("Invalid course ID");
         }
-        if (query.userId() == null || query.userId().isEmpty()) {
+        if (query.userId() == null || query.userId().isBlank()) {
             throw new IllegalArgumentException("Invalid user ID");
         }
 
-        return courseRepository.findById(query.courseId())
-                .flatMap(course -> course.getUserProgress(query.userId()));
+        // CORRECCIÓN: Usamos el UserProgressRepository directamente. Es mucho más eficiente.
+        return userProgressRepository.findByCourseIdAndUserId(query.courseId(), query.userId())
+                .map(userProgress -> userProgress.getProgress()); // Mapeamos el Optional<UserProgress> a Optional<Integer>
     }
 }

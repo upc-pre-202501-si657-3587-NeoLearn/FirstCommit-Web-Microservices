@@ -1,5 +1,6 @@
 package com.neolearn.courses_service.domain.model.aggregates;
 
+import com.neolearn.courses_service.domain.model.entities.UserProgress;
 import com.neolearn.courses_service.domain.model.events.CoursePublishedEvent;
 import com.neolearn.courses_service.domain.model.valueobjects.*;
 import jakarta.persistence.*;
@@ -33,14 +34,9 @@ public class Course extends AbstractAggregateRoot<Course> {
     @ElementCollection
     private List<String> enrolledStudents = new ArrayList<>();
 
-    @ElementCollection
-    @CollectionTable(
-            name = "courses_user_progress",  // ¡Este nombre debe coincidir con tu consulta SQL!
-            joinColumns = @JoinColumn(name = "course_id")
-    )
-    @MapKeyColumn(name = "user_id")  // Columna para la clave del mapa (user_id)
-    @Column(name = "progress")       // Columna para el valor (progress)
-    private Map<String, Integer> userProgress = new HashMap<>();
+    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UserProgress> userProgresses = new ArrayList<>();
+
 
     protected Course() {}
 
@@ -71,15 +67,9 @@ public class Course extends AbstractAggregateRoot<Course> {
         if (!this.published) {
             throw new IllegalStateException("No se puede inscribir a un curso no publicado");
         }
-        this.enrolledStudents.add(userId);
-        this.userProgress.put(userId, 0); // Progreso inicial 0%
-    }
-
-    public void updateUserProgress(String userId, int progress) {
-        if (!this.enrolledStudents.contains(userId)) {
-            throw new IllegalArgumentException("El usuario no está inscrito");
+        if (!enrolledStudents.contains(userId)) {
+            this.enrolledStudents.add(userId);
         }
-        this.userProgress.put(userId, Math.min(100, Math.max(0, progress)));
     }
 
     public void addRating(String userId, int rating) {
@@ -96,12 +86,8 @@ public class Course extends AbstractAggregateRoot<Course> {
                 .orElse(0.0);
     }
 
-    public Optional<Integer> getUserProgress(String userId) {
-        return Optional.ofNullable(this.userProgress.get(userId));
-    }
-
     public boolean isUserEnrolled(String userId) {
-        return this.enrolledStudents.contains(userId);
+        return !this.enrolledStudents.contains(userId);
     }
 
 

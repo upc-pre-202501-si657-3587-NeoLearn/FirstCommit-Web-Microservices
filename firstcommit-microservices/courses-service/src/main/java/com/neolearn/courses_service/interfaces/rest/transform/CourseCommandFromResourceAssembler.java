@@ -5,7 +5,7 @@ import com.neolearn.courses_service.interfaces.rest.resources.CreateCourseResour
 
 public class CourseCommandFromResourceAssembler {
 
-    public static CreateCourseCommand toCommandFromResource(CreateCourseResource resource) {
+    public static CreateCourseCommand toCommandFromResource(CreateCourseResource resource,String instructorId) {
         return new CreateCourseCommand(
                 resource.title(),
                 resource.description(),
