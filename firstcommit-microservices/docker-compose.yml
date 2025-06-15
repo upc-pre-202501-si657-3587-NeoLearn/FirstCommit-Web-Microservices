@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  db-courses:
+    image: mysql:5.7
+    container_name: db-courses
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_COURSES_NAME}
+      MYSQL_ROOT_PASSWORD: ${DB_COURSES_ROOT_PASSWORD}
+    ports:
+      - "${DB_COURSES_PORT}:3306"
+
+  db-roadmaps:
+    image: mysql:5.7
+    container_name: db-roadmaps
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_ROADMAPS_NAME}
+      MYSQL_ROOT_PASSWORD: ${DB_ROADMAPS_ROOT_PASSWORD}
+    ports:
+      - "${DB_ROADMAPS_PORT}:3306"
+
+  db-projects:
+    image: mysql:5.7
+    container_name: db-projects
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_PROJECTS_NAME}
+      MYSQL_ROOT_PASSWORD: ${DB_PROJECTS_ROOT_PASSWORD}
+    ports:
+      - "${DB_PROJECTS_PORT}:3306"
+
+  db-membership:
+    image: mysql:5.7
+    container_name: db-membership
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_MEMBERSHIP_NAME}
+      MYSQL_ROOT_PASSWORD: ${DB_MEMBERSHIP_ROOT_PASSWORD}
+    ports:
+      - "${DB_MEMBERSHIP_PORT}:3306"
