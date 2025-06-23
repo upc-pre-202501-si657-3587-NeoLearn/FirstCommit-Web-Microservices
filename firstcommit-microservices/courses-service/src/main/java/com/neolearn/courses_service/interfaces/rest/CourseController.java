@@ -42,8 +42,8 @@ public class CourseController {
     // ============================== ADMIN ENDPOINTS ============================== //
 
 
-    @Operation(summary = "Create a new course [SECURITY DISABLED]")
-    @PostMapping("/admin/courses")
+    @Operation(summary = "Create a new course")
+    @PostMapping("/admins/courses")
     public ResponseEntity<CourseResource> createCourse(
             @RequestBody CreateCourseResource courseResource) {
 
@@ -55,8 +55,8 @@ public class CourseController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @Operation(summary = "Get all courses (published and unpublished) for admin view [SECURITY DISABLED]")
-    @GetMapping("/admin/courses")
+    @Operation(summary = "Get all courses (published and unpublished) for admin view ")
+    @GetMapping("/admins/courses")
     public ResponseEntity<List<CourseResource>> getAllCoursesForAdmin() {
         // Creamos la consulta, pidiendo TODOS los cursos (onlyPublished = false)
         var query = new GetAllCoursesQuery(false);
@@ -70,7 +70,7 @@ public class CourseController {
         return ResponseEntity.ok(response);
     }
     @Operation(summary = "Update a course [CORRECTED & SECURED]")
-    @PutMapping("/admin/courses/{courseId}")
+    @PutMapping("/admins/courses/{courseId}")
     public ResponseEntity<CourseResource> updateCourse(
             @PathVariable Long courseId,
             @RequestBody UpdateCourseResource updateResource) { // Usamos el Resource corregido
@@ -93,7 +93,7 @@ public class CourseController {
     }
 
     @Operation(summary = "Publish a course [SECURITY DISABLED]")
-    @PostMapping("/admin/courses/{courseId}/publish")
+    @PostMapping("/admins/courses/{courseId}/publish")
     public ResponseEntity<Void> publishCourse(@PathVariable Long courseId) {
         var command = new PublishCourseCommand(courseId, TEMP_INSTRUCTOR_ID);
         courseCommandService.handle(command);
@@ -101,7 +101,7 @@ public class CourseController {
     }
 
     @Operation(summary = "Delete a course [SECURITY DISABLED]")
-    @DeleteMapping("/admin/courses/{courseId}")
+    @DeleteMapping("/admins/courses/{courseId}")
     public ResponseEntity<Void> deleteCourse(@PathVariable Long courseId) {
         // 1. Crear el comando de borrado usando el ID de la ruta y el ID temporal.
         var command = new DeleteCourseCommand(courseId, TEMP_INSTRUCTOR_ID);
@@ -116,7 +116,7 @@ public class CourseController {
     // ============================== USER ENDPOINTS ============================== //
 
     @Operation(summary = "Enroll in a course [SECURITY DISABLED]")
-    @PostMapping("/user/courses/{courseId}/enroll")
+    @PostMapping("/users/courses/{courseId}/enroll")
     public ResponseEntity<Void> enrollInCourse(@PathVariable Long courseId) {
         var command = new EnrollCourseCommand(courseId, TEMP_USER_ID);
         courseCommandService.handle(command);
@@ -124,7 +124,7 @@ public class CourseController {
     }
 
     @Operation(summary = "Get enrolled courses [SECURITY DISABLED]")
-    @GetMapping("/user/courses/enrolled")
+    @GetMapping("/users/courses/enrolled")
     public ResponseEntity<List<CourseResource>> getEnrolledCourses() {
         var query = new GetEnrolledCoursesQuery(TEMP_USER_ID);
         var courses = courseQueryService.handle(query);
@@ -138,7 +138,7 @@ public class CourseController {
 
 
     @Operation(summary = "Mark a piece of content as completed for a user")
-    @PostMapping("/user/courses/{courseId}/content/{contentId}/complete")
+    @PostMapping("/users/courses/{courseId}/content/{contentId}/complete")
     public ResponseEntity<Void> completeContent(
             @PathVariable Long courseId,
             @PathVariable String contentId,
@@ -151,7 +151,7 @@ public class CourseController {
         return ResponseEntity.ok().build();
     }
     @Operation(summary = "Rate a course [SECURITY DISABLED]")
-    @PostMapping("/user/courses/{courseId}/rating")
+    @PostMapping("/users/courses/{courseId}/rating")
     public ResponseEntity<Void> rateCourse(
             @PathVariable Long courseId,
             @RequestBody RateCourseResource ratingResource) {

@@ -16,6 +16,7 @@
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.38/lombok-1.18.38.jar" />
           <entry name="$MAVEN_REPOSITORY$/org/springframework/boot/spring-boot-configuration-processor/3.5.0/spring-boot-configuration-processor-3.5.0.jar" />
         </processorPath>
+        <module name="api-gateway" />
         <module name="iam-service" />
         <module name="memberships-service" />
         <module name="roadmaps-service" />
@@ -38,6 +39,7 @@
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="api-gateway" options="-parameters" />
       <module name="courses-service" options="-parameters" />
       <module name="iam-service" options="-parameters" />
       <module name="memberships-service" options="-parameters" />
