@@ -57,8 +57,11 @@ public class TokenServiceImpl implements BearerTokenService {
     @Override
     public String generateToken(Authentication authentication) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        Long userId = ((UserDetailsImpl) userDetails).getId(); // Get the user's ID from UserDetailsImpl
-        return buildTokenWithDefaultParameters(userDetails.getUsername(), userId);
+        UserDetailsImpl userDetailsImpl = (UserDetailsImpl) userDetails;
+        Long userId = userDetailsImpl.getId(); // Get the user's ID from UserDetailsImpl
+        
+        // Extract user data from authentication
+        return buildTokenWithUserData(userDetails.getUsername(), userId, userDetailsImpl);
     }
 
     /**
@@ -70,6 +73,48 @@ public class TokenServiceImpl implements BearerTokenService {
     public String generateToken(String username) {
         // This method might need to be updated to include the user's ID
         return buildTokenWithDefaultParameters(username, null);
+    }
+
+    /**
+     * This method generates a JWT token from a User entity with complete information
+     * @param user the user entity
+     * @return String the JWT token
+     */
+    @Override
+    public String generateToken(com.neolearn.iam_service.iam.domain.model.aggregates.User user) {
+        var issuedAt = new Date();
+        var expiration = DateUtils.addDays(issuedAt, expirationDays);
+        var key = getSigningKey();
+
+        // Extract role from user (take the first one, or default to ROLE_USER)
+        String role = user.getRoles().stream()
+                .map(r -> r.getStringName())
+                .findFirst()
+                .orElse("ROLE_USER");
+
+        // Extract subscription tier from user (or use default FREE)
+        String subscriptionTier = user.getSubscriptionTier() != null ? 
+                user.getSubscriptionTier().name() : "FREE";
+
+        // Log the encoded information
+        LOGGER.info("=== JWT TOKEN ENCODING (User Entity) ===");
+        LOGGER.info("Username: {}", user.getUsername());
+        LOGGER.info("User ID: {}", user.getId());
+        LOGGER.info("Role: {}", role);
+        LOGGER.info("Subscription Tier: {}", subscriptionTier);
+        LOGGER.info("Issued At: {}", issuedAt);
+        LOGGER.info("Expires At: {}", expiration);
+        LOGGER.info("========================================");
+
+        return Jwts.builder()
+                .setSubject(user.getUsername())
+                .claim("id", user.getId())
+                .claim("rol", role)
+                .claim("tier_subscription", subscriptionTier)
+                .setIssuedAt(issuedAt)
+                .setExpiration(expiration)
+                .signWith(key)
+                .compact();
     }
 
     /**
@@ -133,10 +178,64 @@ public class TokenServiceImpl implements BearerTokenService {
         var expiration = DateUtils.addDays(issuedAt, expirationDays);
         var key = getSigningKey();
 
+        // Log the encoded information (simple token generation)
+        LOGGER.info("=== JWT TOKEN ENCODING (Simple) ===");
+        LOGGER.info("Username: {}", username);
+        LOGGER.info("User ID: {}", userId);
+        LOGGER.info("Role: ROLE_USER (default)");
+        LOGGER.info("Subscription Tier: FREE (default)");
+        LOGGER.info("Issued At: {}", issuedAt);
+        LOGGER.info("Expires At: {}", expiration);
+        LOGGER.info("===================================");
+
         // Versión corregida utilizando setSubject() en lugar de subject()
         return Jwts.builder()
                 .setSubject(username)
-                .claim("userId", userId) // Include the user's ID in the token
+                .claim("id", userId) // Changed from "userId" to "id" for compatibility
+                .claim("rol", "ROLE_USER") // Default role
+                .claim("tier_subscription", "FREE") // Default tier
+                .setIssuedAt(issuedAt)
+                .setExpiration(expiration)
+                .signWith(key)
+                .compact();
+    }
+
+    /**
+     * This method generates a JWT token with real user data extracted from UserDetailsImpl.
+     * @param username the username
+     * @param userId the user ID
+     * @param userDetails the user details implementation
+     * @return String the JWT token
+     */
+    private String buildTokenWithUserData(String username, Long userId, UserDetailsImpl userDetails) {
+        var issuedAt = new Date();
+        var expiration = DateUtils.addDays(issuedAt, expirationDays);
+        var key = getSigningKey();
+
+        // Extract role from authorities (take the first one, or default to ROLE_USER)
+        String role = userDetails.getAuthorities().stream()
+                .map(auth -> auth.getAuthority())
+                .findFirst()
+                .orElse("ROLE_USER");
+
+        // For now, use default tier - this should be extracted from User entity in the future
+        String subscriptionTier = "FREE"; // TODO: Extract from User entity when available
+
+        // Log the encoded information
+        LOGGER.info("=== JWT TOKEN ENCODING ===");
+        LOGGER.info("Username: {}", username);
+        LOGGER.info("User ID: {}", userId);
+        LOGGER.info("Role: {}", role);
+        LOGGER.info("Subscription Tier: {}", subscriptionTier);
+        LOGGER.info("Issued At: {}", issuedAt);
+        LOGGER.info("Expires At: {}", expiration);
+        LOGGER.info("=========================");
+
+        return Jwts.builder()
+                .setSubject(username)
+                .claim("id", userId)
+                .claim("rol", role)
+                .claim("tier_subscription", subscriptionTier)
                 .setIssuedAt(issuedAt)
                 .setExpiration(expiration)
                 .signWith(key)

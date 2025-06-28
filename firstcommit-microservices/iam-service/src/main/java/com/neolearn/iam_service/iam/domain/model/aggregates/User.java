@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Set;
 
 import com.neolearn.iam_service.iam.domain.model.entities.Role;
+import com.neolearn.iam_service.iam.domain.model.valueobjects.SubscriptionTier;
 import com.neolearn.iam_service.shared.domain.model.aggregates.AuditableAbstractAggregateRoot;
 
 /**
@@ -36,18 +37,29 @@ public class User extends AuditableAbstractAggregateRoot<User> {
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     private Set<Role> roles;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "subscription_tier", nullable = false)
+    private SubscriptionTier subscriptionTier;
+
     public User() {
         this.roles = new HashSet<>();
+        this.subscriptionTier = SubscriptionTier.getDefaultTier();
     }
     public User(String username, String password) {
         this.username = username;
         this.password = password;
         this.roles = new HashSet<>();
+        this.subscriptionTier = SubscriptionTier.getDefaultTier();
     }
 
     public User(String username, String password, List<Role> roles) {
         this(username, password);
         addRoles(roles);
+    }
+
+    public User(String username, String password, List<Role> roles, SubscriptionTier subscriptionTier) {
+        this(username, password, roles);
+        this.subscriptionTier = subscriptionTier != null ? subscriptionTier : SubscriptionTier.getDefaultTier();
     }
 
     /**
@@ -83,5 +95,13 @@ public class User extends AuditableAbstractAggregateRoot<User> {
 
     public Set<Role> getRoles() {
         return roles;
+    }
+
+    public SubscriptionTier getSubscriptionTier() {
+        return subscriptionTier;
+    }
+
+    public void updateSubscriptionTier(SubscriptionTier subscriptionTier) {
+        this.subscriptionTier = subscriptionTier != null ? subscriptionTier : SubscriptionTier.getDefaultTier();
     }
 }

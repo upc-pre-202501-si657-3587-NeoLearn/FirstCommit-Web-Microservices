@@ -54,20 +54,12 @@ public class UserDetailsImpl implements UserDetails {
         return new UserDetailsImpl(user.getId(), user.getUsername(), user.getPassword(), authorities); // Modify this line
     }
 
-    public boolean isSeller() {
-        return authorities.stream().anyMatch(a -> a.getAuthority().equals("ROLE_SELLER"));
+    public boolean isUser() {
+        return authorities.stream().anyMatch(a -> a.getAuthority().equals("ROLE_USER"));
     }
 
     public boolean isAdmin() {
         return authorities.stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-    }
-
-    public boolean isOwner() {
-        return authorities.stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-    }
-
-    public boolean isFarmWorker() {
-        return authorities.stream().anyMatch(a -> a.getAuthority().equals("ROLE_FARMWORKER"));
     }
 
     public Long getUserDetailsId(){

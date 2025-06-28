@@ -50,7 +50,7 @@ public class UserCommandServiceImpl implements UserCommandService {
 
         var roles = command.roles();
         if (roles.isEmpty()) {
-                var role = roleRepository.findByName(Roles.ROLE_STUDENT);
+                var role = roleRepository.findByName(Roles.ROLE_USER);
             if (role.isPresent()) roles.add(role.get());
         } else {
             roles = roles.stream().map(role -> {
@@ -79,7 +79,7 @@ public class UserCommandServiceImpl implements UserCommandService {
         if (user.isEmpty()) throw new RuntimeException("User not found");
         if (!hashingService.matches(command.password(), user.get().getPassword()))
             throw new RuntimeException("Invalid password");
-        var token = tokenService.generateToken(user.get().getUsername());
+        var token = tokenService.generateToken(user.get()); // Use the new method with User entity
         return Optional.of(ImmutablePair.of(user.get(), token));
     }
 }
