@@ -1,101 +1,97 @@
 package com.neolearn.roadmaps_service.shared.infrastructure.jwt;
 
-import com.neolearn.roadmaps_service.shared.infrastructure.jwt.JwtTokenUtil;
-import com.neolearn.roadmaps_service.shared.infrastructure.jwt.UserContext;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+import java.util.List;
+
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class JwtInterceptor implements HandlerInterceptor {
 
     private final JwtTokenUtil jwtTokenUtil;
-    private final UserContextService userContextService;
+    private final UserContextService userContextService; // Tu servicio existente
 
-    public JwtInterceptor(JwtTokenUtil jwtTokenUtil, UserContextService userContextService) {
-        this.jwtTokenUtil = jwtTokenUtil;
-        this.userContextService = userContextService;
-    }
+    private static final String AUTHORIZATION_HEADER = "Authorization";
+    private static final String BEARER_PREFIX = "Bearer ";
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        String authHeader = request.getHeader("Authorization");
-        
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
-            
-            try {
-                if (jwtTokenUtil.validateToken(token)) {
-                    // Extract user information from JWT
-                    Long userId = jwtTokenUtil.extractUserId(token);
-                    String username = jwtTokenUtil.extractUsername(token);
-                    String role = jwtTokenUtil.extractRole(token);
-                    String tierSubscription = jwtTokenUtil.extractTierSubscription(token);
 
-                    // Log the decoded information
-                    log.info("=== JWT TOKEN DECODING ===");
-                    log.info("Username: {}", username);
-                    log.info("User ID: {}", userId);
-                    log.info("Role: {}", role);
-                    log.info("Subscription Tier: {}", tierSubscription);
-                    log.info("Token Valid: true");
-                    log.info("==========================");
-
-                    // Bloquear usuarios FREE excepto para endpoints públicos
-                    if ("FREE".equals(tierSubscription) && !isPublicEndpoint(request.getRequestURI())) {
-                        log.warn("Access denied for FREE tier user: {} to endpoint: {}", username, request.getRequestURI());
-                        response.setStatus(HttpStatus.FORBIDDEN.value());
-                        response.setContentType("application/json");
-                        response.getWriter().write("{\"error\":\"Tu plan FREE no permite acceso a esta funcionalidad. Actualiza a BASIC o PRO.\"}");
-                        return false;
-                    }
-
-                    UserContext userContext = new UserContext(
-                            userId,
-                            username,
-                            role,
-                            tierSubscription,
-                            jwtTokenUtil.extractExpiration(token)
-                    );
-                    
-                    userContextService.setCurrentUser(userContext);
-                    log.debug("User context set for user: {}", userContext.getUsuario());
-                } else {
-                    log.warn("Invalid JWT token received");
-                }
-            } catch (Exception e) {
-                log.error("Error processing JWT token: {}", e.getMessage());
-                // Continúa sin establecer el contexto de usuario
-            }
-        } else {
-            log.debug("No JWT token found in Authorization header");
+        if (HttpMethod.OPTIONS.matches(request.getMethod())) {
+            return true;
         }
-        
-        return true; // Continúa con la ejecución
+
+        String authHeader = request.getHeader(AUTHORIZATION_HEADER);
+
+        if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX)) {
+            response.sendError(HttpStatus.UNAUTHORIZED.value(), "Authorization header is missing or invalid.");
+            return false;
+        }
+
+        String token = authHeader.substring(BEARER_PREFIX.length());
+
+        try {
+            if (!jwtTokenUtil.validateToken(token)) {
+                response.sendError(HttpStatus.UNAUTHORIZED.value(), "The provided JWT is invalid or has expired.");
+                return false;
+            }
+
+            // El token es válido, creamos el UserContext
+            Claims claims = jwtTokenUtil.extractAllClaims(token);
+            UserContext userContext = new UserContext(
+                    claims.get("userId", Long.class),
+                    claims.getSubject(),
+                    claims.get("roles", String.class), // Asumiendo que "roles" es el nombre del claim
+                    claims.get("tier", String.class),    // Asumiendo que "tier" es el nombre del claim
+                    claims.getExpiration()
+            );
+
+            // Establecemos el contexto para esta petición
+            userContextService.setCurrentUser(userContext);
+            log.info("User context set for user: {}, roles: {}", userContext.getUsuario(), userContext.getRol());
+
+            // --- LÓGICA DE AUTORIZACIÓN MEJORADA ---
+            // Ahora la lógica de autorización se basa en el UserContextService
+            if (isEndpointProtected(request)) {
+                if (!userContextService.hasRole("ADMIN")) { // Usamos el método de tu servicio
+                    log.warn("Authorization failure. User '{}' with roles {} attempted to access ADMIN endpoint: {}",
+                            userContext.getUsuario(), userContext.getRol(), request.getRequestURI());
+                    response.sendError(HttpStatus.FORBIDDEN.value(), "You do not have the required ADMIN role to access this resource.");
+                    return false;
+                }
+            }
+
+        } catch (Exception e) {
+            log.error("Error processing JWT token: {}", e.getMessage(), e);
+            response.sendError(HttpStatus.UNAUTHORIZED.value(), "Error processing JWT token.");
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Define qué endpoints requieren el rol de ADMIN.
+     */
+    private boolean isEndpointProtected(HttpServletRequest request) {
+        String method = request.getMethod();
+
+        // Cualquier método que modifique datos (POST, PUT, DELETE, PATCH) requiere ser ADMIN.
+        return !method.equalsIgnoreCase("GET");
     }
 
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
-        // Limpia el contexto del usuario después de completar la request
+        // Limpia el ThreadLocal para evitar memory leaks
         userContextService.clearCurrentUser();
-    }
-
-    /**
-     * Determina si un endpoint es público y no requiere validación de tier.
-     * Los proyectos de la plataforma pueden ser vistos por usuarios FREE.
-     * 
-     * @param requestURI la URI de la petición
-     * @return true si es un endpoint público
-     */
-    private boolean isPublicEndpoint(String requestURI) {
-        // Endpoints públicos para usuarios FREE
-        return requestURI.equals("/api/v1/projects/platform") ||
-               requestURI.startsWith("/swagger") ||
-               requestURI.startsWith("/v3/api-docs") ||
-               requestURI.equals("/actuator/health");
     }
 }

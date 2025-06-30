@@ -6,7 +6,6 @@
 		<groupId>com.neolearn</groupId>
 		<artifactId>microservices</artifactId>
 		<version>1.0.0-SNAPSHOT</version>
-		<relativePath>../pom.xml</relativePath>
 	</parent>
 
 	<artifactId>iam-service</artifactId>
