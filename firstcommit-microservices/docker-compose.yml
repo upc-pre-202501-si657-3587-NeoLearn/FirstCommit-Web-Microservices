@@ -1,6 +1,15 @@
 version: '3.8'
 
 services:
+  db-iam:
+    image: mysql:5.7
+    container_name: db-iam
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_IAM_NAME}
+      MYSQL_ROOT_PASSWORD: ${DB_IAM_ROOT_PASSWORD}
+    ports:
+      - "${DB_IAM_PORT}:3306"
   db-courses:
     image: mysql:5.7
     container_name: db-courses
