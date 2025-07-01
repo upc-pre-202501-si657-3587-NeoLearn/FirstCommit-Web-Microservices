@@ -1,6 +1,30 @@
+# La 'version' es obsoleta en las versiones modernas de Docker Compose.
+# Se puede eliminar de forma segura.
 version: '3.8'
 
 services:
+  # ======================================================
+  #           BASES DE DATOS
+  # ======================================================
+
+  db-iam:
+    image: mysql:5.7
+    container_name: db-iam
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_IAM_NAME}
+      MYSQL_ROOT_PASSWORD: ${DB_IAM_ROOT_PASSWORD}
+      MYSQL_ROOT_HOST: '%'
+    ports:
+      - "${DB_IAM_PORT}:3306" # ej. 3306
+    networks:
+      - neolearn-network
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p${DB_IAM_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   db-courses:
     image: mysql:5.7
     container_name: db-courses
@@ -8,8 +32,16 @@ services:
     environment:
       MYSQL_DATABASE: ${DB_COURSES_NAME}
       MYSQL_ROOT_PASSWORD: ${DB_COURSES_ROOT_PASSWORD}
+      MYSQL_ROOT_HOST: '%'
     ports:
-      - "${DB_COURSES_PORT}:3306"
+      - "${DB_COURSES_PORT}:3306" # ej. 3307
+    networks:
+      - neolearn-network
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p${DB_COURSES_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   db-roadmaps:
     image: mysql:5.7
@@ -18,8 +50,16 @@ services:
     environment:
       MYSQL_DATABASE: ${DB_ROADMAPS_NAME}
       MYSQL_ROOT_PASSWORD: ${DB_ROADMAPS_ROOT_PASSWORD}
+      MYSQL_ROOT_HOST: '%'
     ports:
-      - "${DB_ROADMAPS_PORT}:3306"
+      - "${DB_ROADMAPS_PORT}:3306" # ej. 3308
+    networks:
+      - neolearn-network
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p${DB_ROADMAPS_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   db-projects:
     image: mysql:5.7
@@ -28,8 +68,16 @@ services:
     environment:
       MYSQL_DATABASE: ${DB_PROJECTS_NAME}
       MYSQL_ROOT_PASSWORD: ${DB_PROJECTS_ROOT_PASSWORD}
+      MYSQL_ROOT_HOST: '%'
     ports:
-      - "${DB_PROJECTS_PORT}:3306"
+      - "${DB_PROJECTS_PORT}:3306" # ej. 3309
+    networks:
+      - neolearn-network
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p${DB_PROJECTS_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   db-membership:
     image: mysql:5.7
@@ -38,10 +86,8 @@ services:
     environment:
       MYSQL_DATABASE: ${DB_MEMBERSHIP_NAME}
       MYSQL_ROOT_PASSWORD: ${DB_MEMBERSHIP_ROOT_PASSWORD}
+      MYSQL_ROOT_HOST: '%'
     ports:
-<<<<<<< Updated upstream
-      - "${DB_MEMBERSHIP_PORT}:3306"
-=======
       - "${DB_MEMBERSHIP_PORT}:3306" # ej. 3310
     networks:
       - neolearn-network
@@ -120,10 +166,29 @@ services:
     networks:
       - neolearn-network
 
+
+
+  # API Gateway
+ # api-gateway:
+  #  build:
+  #    context: ./api-gateway
+  #  container_name: api-gateway
+  #  restart: unless-stopped
+   # ports:
+    #  - "8080:8080" # El Gateway es el que debería usar el puerto 8080 principal
+   # networks:
+  #    - neolearn-network
+    # El gateway depende de los servicios que va a enrutar
+   # depends_on:
+  #    - iam-service
+   #   - courses-service
+  #    - roadmaps-service
+   #   - projects-service
+  #    - memberships-service
+
 # ======================================================
 #           RED COMÚN
 # ======================================================
 networks:
   neolearn-network:
     driver: bridge
->>>>>>> Stashed changes
