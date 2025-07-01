@@ -39,4 +39,91 @@ services:
       MYSQL_DATABASE: ${DB_MEMBERSHIP_NAME}
       MYSQL_ROOT_PASSWORD: ${DB_MEMBERSHIP_ROOT_PASSWORD}
     ports:
+<<<<<<< Updated upstream
       - "${DB_MEMBERSHIP_PORT}:3306"
+=======
+      - "${DB_MEMBERSHIP_PORT}:3306" # ej. 3310
+    networks:
+      - neolearn-network
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p${DB_MEMBERSHIP_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ======================================================
+  #           MICROSERVICIOS
+  # ======================================================
+
+  iam-service:
+    build:
+      context: ./iam-service
+    container_name: iam-service
+    restart: unless-stopped
+    depends_on:
+      db-iam:
+        condition: service_healthy
+    ports:
+      - "8081:8080"
+    networks:
+      - neolearn-network
+
+  courses-service:
+    build:
+      context: ./courses-service
+    container_name: courses-service
+    restart: unless-stopped
+    depends_on:
+      db-courses:
+        condition: service_healthy
+    ports:
+      - "8082:8080"
+    networks:
+      - neolearn-network
+
+  roadmaps-service:
+    build:
+      context: ./roadmaps-service
+    container_name: roadmaps-service
+    restart: unless-stopped
+    depends_on:
+      db-roadmaps:
+        condition: service_healthy
+    ports:
+      - "8084:8080" # Usé 8084 para roadmaps
+    networks:
+      - neolearn-network
+
+  projects-service:
+    build:
+      context: ./projects-service
+    container_name: projects-service
+    restart: unless-stopped
+    depends_on:
+      db-projects:
+        condition: service_healthy
+    ports:
+      - "8083:8080" # Mantenemos el que ya funcionaba
+    networks:
+      - neolearn-network
+
+  memberships-service:
+    build:
+      context: ./memberships-service
+    container_name: memberships-service
+    restart: unless-stopped
+    depends_on:
+      db-membership:
+        condition: service_healthy
+    ports:
+      - "8085:8080"
+    networks:
+      - neolearn-network
+
+# ======================================================
+#           RED COMÚN
+# ======================================================
+networks:
+  neolearn-network:
+    driver: bridge
+>>>>>>> Stashed changes

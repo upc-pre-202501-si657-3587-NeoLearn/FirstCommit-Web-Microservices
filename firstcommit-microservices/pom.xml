@@ -39,7 +39,6 @@
 		<module>memberships-service</module>
 		<module>projects-service</module>
 		<module>roadmaps-service</module>
-		<module>api-gateway</module>
 	</modules>
 	<dependencies>
 
