@@ -3,6 +3,8 @@
   <component name="Encoding">
     <file url="file://$PROJECT_DIR$/firstcommit-microservices/api-gateway/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/firstcommit-microservices/courses-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/firstcommit-microservices/discovery-server/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/firstcommit-microservices/gateway-server/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/firstcommit-microservices/iam-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/firstcommit-microservices/memberships-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/firstcommit-microservices/projects-service/src/main/java" charset="UTF-8" />

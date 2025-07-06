@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/FirstCommit-Web-Microservices.iml" filepath="$PROJECT_DIR$/.idea/FirstCommit-Web-Microservices.iml" />
+      <module fileurl="file://$PROJECT_DIR$/firstcommit-microservices/projects-service/projects-service.iml" filepath="$PROJECT_DIR$/firstcommit-microservices/projects-service/projects-service.iml" />
     </modules>
   </component>
 </project>

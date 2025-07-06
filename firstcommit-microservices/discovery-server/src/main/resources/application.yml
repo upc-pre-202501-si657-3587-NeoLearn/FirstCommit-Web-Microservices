@@ -1,0 +1,12 @@
+server:
+  port: 8761 # Puerto estándar para Eureka
+
+spring:
+  application:
+    name: discovery-server
+
+eureka:
+  client:
+    # Un servidor Eureka no se registra consigo mismo en un entorno de un solo nodo.
+    register-with-eureka: false
+    fetch-registry: false

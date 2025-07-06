@@ -3,27 +3,25 @@ package com.neolearn.roadmaps_service.roadmaps.infrastructure.persistence.jpa.re
 import com.neolearn.roadmaps_service.roadmaps.domain.model.aggregates.Roadmap;
 import com.neolearn.roadmaps_service.roadmaps.domain.model.valueobjects.RoadmapId;
 import com.neolearn.roadmaps_service.roadmaps.domain.services.RoadmapRepository;
-import com.neolearn.roadmaps_service.roadmaps.infrastructure.persistence.jpa.entities.RoadmapEntity;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
-// Interfaz interna de Spring Data JPA
-interface SpringDataRoadmapRepository extends JpaRepository<RoadmapEntity, UUID> {
-    boolean existsByName(String name);
-}
-
-@Repository // ¡Esta anotación registra la clase como un Bean de Spring!
+/**
+ * Implementación de la interfaz de Repositorio del dominio.
+ * Actúa como un adaptador entre el dominio y la capa de persistencia de Spring Data JPA.
+ * Es responsable de mapear entre los agregados del dominio (Roadmap) y las entidades de persistencia (RoadmapEntity).
+ */
+@Repository // Esta anotación la registra como un bean de Spring para inyección de dependencias.
 public class RoadmapRepositoryImpl implements RoadmapRepository {
 
-    private final SpringDataRoadmapRepository jpaRepository;
+    private final SpringDataJPARoadmapRepository jpaRepository;
     private final RoadmapPersistenceMapper mapper;
 
-    public RoadmapRepositoryImpl(SpringDataRoadmapRepository jpaRepository, RoadmapPersistenceMapper mapper) {
+    // Inyección de dependencias a través del constructor.
+    public RoadmapRepositoryImpl(SpringDataJPARoadmapRepository jpaRepository, RoadmapPersistenceMapper mapper) {
         this.jpaRepository = jpaRepository;
         this.mapper = mapper;
     }
@@ -55,5 +53,10 @@ public class RoadmapRepositoryImpl implements RoadmapRepository {
     @Override
     public boolean existsByName(String name) {
         return jpaRepository.existsByName(name);
+    }
+
+    @Override
+    public boolean existsById(RoadmapId roadmapId) {
+        return jpaRepository.existsById(roadmapId.id());
     }
 }

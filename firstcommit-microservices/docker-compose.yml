@@ -109,10 +109,16 @@ services:
     depends_on:
       db-iam:
         condition: service_healthy
-    ports:
-      - "8081:8080"
+      discovery-server:
+        condition: service_started
     networks:
       - neolearn-network
+    environment:
+      - SPRING_APPLICATION_NAME=iam-service
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db-iam:3306/${DB_IAM_NAME}
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${DB_IAM_ROOT_PASSWORD}
 
   courses-service:
     build:
@@ -122,10 +128,16 @@ services:
     depends_on:
       db-courses:
         condition: service_healthy
-    ports:
-      - "8082:8080"
+      discovery-server:
+        condition: service_started
     networks:
       - neolearn-network
+    environment:
+      - SPRING_APPLICATION_NAME=courses-service
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db-courses:3306/${DB_COURSES_NAME}
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${DB_COURSES_ROOT_PASSWORD}
 
   roadmaps-service:
     build:
@@ -135,10 +147,16 @@ services:
     depends_on:
       db-roadmaps:
         condition: service_healthy
-    ports:
-      - "8084:8080" # Usé 8084 para roadmaps
+      discovery-server:
+        condition: service_started
     networks:
       - neolearn-network
+    environment:
+      - SPRING_APPLICATION_NAME=roadmaps-service
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db-roadmaps:3306/${DB_ROADMAPS_NAME}
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${DB_ROADMAPS_ROOT_PASSWORD}
 
   projects-service:
     build:
@@ -148,10 +166,16 @@ services:
     depends_on:
       db-projects:
         condition: service_healthy
-    ports:
-      - "8083:8080" # Mantenemos el que ya funcionaba
+      discovery-server:
+        condition: service_started
     networks:
       - neolearn-network
+    environment:
+      - SPRING_APPLICATION_NAME=projects-service
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db-projects:3306/${DB_PROJECTS_NAME}
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${DB_PROJECTS_ROOT_PASSWORD}
 
   memberships-service:
     build:
@@ -161,31 +185,68 @@ services:
     depends_on:
       db-membership:
         condition: service_healthy
-    ports:
-      - "8085:8080"
+      discovery-server:
+        condition: service_started
     networks:
       - neolearn-network
 
+    environment:
+      - SPRING_APPLICATION_NAME=membership-service
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db-membership:3306/${DB_MEMBERSHIP_NAME}
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${DB_MEMBERSHIP_ROOT_PASSWORD}
 
+  # ======================================================
+  #           INFRAESTRUCTURA CORE
+  # ======================================================
+  discovery-server:
+      build:
+       context: ./discovery-server
+      container_name: discovery-server
+      restart: unless-stopped
+      ports:
+       - "8761:8761" # Puerto estándar de Eureka
+      networks:
+      - neolearn-network
 
-  # API Gateway
- # api-gateway:
-  #  build:
-  #    context: ./api-gateway
-  #  container_name: api-gateway
-  #  restart: unless-stopped
-   # ports:
-    #  - "8080:8080" # El Gateway es el que debería usar el puerto 8080 principal
-   # networks:
-  #    - neolearn-network
-    # El gateway depende de los servicios que va a enrutar
-   # depends_on:
-  #    - iam-service
-   #   - courses-service
-  #    - roadmaps-service
-   #   - projects-service
-  #    - memberships-service
+  gateway-server:
+    build:
+      context: ./gateway-server
+    container_name: gateway-server
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    networks:
+      - neolearn-network
+    depends_on:
+      - discovery-server
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_CLOUD_GATEWAY_DISCOVERY_LOCATOR_ENABLED=true
+      - SPRING_CLOUD_GATEWAY_DISCOVERY_LOCATOR_LOWERCASE_SERVICE_ID=true
 
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.4 # Usamos una imagen oficial de Keycloak
+    container_name: keycloak
+    restart: unless-stopped
+    ports:
+      - "9090:8080" # Mapeamos el puerto 8080 de Keycloak al 9090 de tu máquina para evitar conflictos
+    networks:
+      - neolearn-network
+    environment:
+      # Credenciales para el usuario administrador de Keycloak
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      # Para iniciar en modo desarrollo y evitar la necesidad de HTTPS
+      - KC_HTTP_ENABLED=true
+      - KC_HTTP_PORT=8080
+      # Para que Keycloak pueda ser accedido desde el exterior a través de localhost
+      - KC_HOSTNAME_STRICT=false
+      - KC_HOSTNAME=localhost
+    # Comando para iniciar Keycloak
+    command:
+      - start-dev
 # ======================================================
 #           RED COMÚN
 # ======================================================

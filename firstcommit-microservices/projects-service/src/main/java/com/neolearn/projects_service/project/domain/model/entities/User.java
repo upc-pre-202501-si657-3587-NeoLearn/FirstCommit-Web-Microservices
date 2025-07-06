@@ -11,6 +11,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class User extends AuditableModel {
 
+    @Column(name = "external_id", nullable = false, unique = true)
+    private String externalId; // Este es el campo que faltaba
+
     @Column(name = "nombre_usuario", nullable = false, unique = true)
     private String nombreUsuario;
 

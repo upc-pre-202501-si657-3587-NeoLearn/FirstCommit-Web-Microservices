@@ -12,4 +12,6 @@ public interface RoadmapRepository {
     List<Roadmap> findAll();
     void deleteById(RoadmapId roadmapId);
     boolean existsByName(String name);
+    boolean existsById(RoadmapId roadmapId);
+
 }

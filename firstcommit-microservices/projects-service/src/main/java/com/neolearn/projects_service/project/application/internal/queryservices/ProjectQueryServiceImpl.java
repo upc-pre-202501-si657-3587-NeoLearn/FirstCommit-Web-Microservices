@@ -164,4 +164,6 @@ public class ProjectQueryServiceImpl implements ProjectQueryService {
     public Optional<User> handle(GetUserByUsernameQuery query) {
         return userRepository.findByNombreUsuario(query.nombreUsuario());
     }
+
+
 } 

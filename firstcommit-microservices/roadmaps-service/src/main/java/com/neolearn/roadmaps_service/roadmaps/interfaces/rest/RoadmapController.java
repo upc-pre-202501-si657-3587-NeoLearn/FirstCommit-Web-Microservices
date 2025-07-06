@@ -15,6 +15,7 @@ import com.neolearn.roadmaps_service.roadmaps.interfaces.rest.transform.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -38,6 +39,7 @@ public class RoadmapController {
      * @return el roadmap creado con estado 201.
      */
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<RoadmapResource> createRoadmap(@RequestBody CreateRoadmapResource resource) {
         var command = CreateRoadmapCommandFromResourceAssembler.toCommandFromResource(resource);
         var roadmapId = roadmapCommandService.handle(command);
@@ -54,6 +56,7 @@ public class RoadmapController {
      * @return el roadmap encontrado o 404 si no existe.
      */
     @GetMapping("/{roadmapId}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<RoadmapResource> getRoadmapById(@PathVariable String roadmapId) {
         var query = new GetRoadmapByIdQuery(RoadmapId.from(roadmapId));
         return roadmapQueryService.handle(query)
@@ -66,6 +69,7 @@ public class RoadmapController {
      * @return una lista de todos los roadmaps.
      */
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<RoadmapResource>> getAllRoadmaps() {
         var query = new GetAllRoadmapsQuery();
         var roadmaps = roadmapQueryService.handle(query);
@@ -82,12 +86,12 @@ public class RoadmapController {
      * @return el roadmap actualizado.
      */
     @PutMapping("/{roadmapId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<RoadmapResource> updateRoadmap(@PathVariable String roadmapId, @RequestBody UpdateRoadmapResource resource) {
         var command = UpdateRoadmapDetailsCommandFromResourceAssembler.toCommandFromResource(roadmapId, resource);
-        // Asegúrate de implementar el handle para este comando en el service.
-        // roadmapCommandService.handle(command);
-        // Para devolver el recurso actualizado, necesitas que el servicio lo devuelva o hacer otra consulta.
-        // Por simplicidad, aquí lo volvemos a consultar:
+
+         roadmapCommandService.handle(command);
+
         var updatedRoadmap = roadmapQueryService.handle(new GetRoadmapByIdQuery(RoadmapId.from(roadmapId)))
                 .orElseThrow(() -> new IllegalStateException("Roadmap could not be found after update"));
 
@@ -101,6 +105,7 @@ public class RoadmapController {
      * @return estado 204 No Content.
      */
     @DeleteMapping("/{roadmapId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteRoadmap(@PathVariable String roadmapId) {
         var command = new DeleteRoadmapCommand(roadmapId);
         roadmapCommandService.handle(command);
@@ -114,6 +119,7 @@ public class RoadmapController {
      * @return estado 201 Created.
      */
     @PostMapping("/{roadmapId}/courses")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> addCourseToRoadmap(@PathVariable String roadmapId, @RequestBody AddCourseToRoadmapResource resource) {
         var command = AddCourseToRoadmapCommandFromResourceAssembler.toCommandFromResource(roadmapId, resource);
         roadmapCommandService.handle(command);
@@ -127,6 +133,7 @@ public class RoadmapController {
      * @return estado 204 No Content.
      */
     @DeleteMapping("/{roadmapId}/courses/{courseId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> removeCourseFromRoadmap(@PathVariable String roadmapId, @PathVariable String courseId) {
         var command = new RemoveCourseFromRoadmapCommand(roadmapId, courseId);
         roadmapCommandService.handle(command);

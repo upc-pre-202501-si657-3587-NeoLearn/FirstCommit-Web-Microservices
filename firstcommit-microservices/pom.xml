@@ -34,11 +34,13 @@
 	</properties>
 
 	<modules>
+		<module>gateway-server</module>
 		<module>iam-service</module>
 		<module>courses-service</module>
 		<module>memberships-service</module>
 		<module>projects-service</module>
 		<module>roadmaps-service</module>
+		<module>discovery-server</module>
 	</modules>
 	<dependencies>
 

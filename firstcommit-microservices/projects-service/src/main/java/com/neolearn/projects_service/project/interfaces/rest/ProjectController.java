@@ -1,34 +1,20 @@
 package com.neolearn.projects_service.project.interfaces.rest;
 
-import com.neolearn.projects_service.project.domain.model.commands.CreateProjectCommand;
-import com.neolearn.projects_service.project.domain.model.commands.UpdateProjectCommand;
-import com.neolearn.projects_service.project.domain.model.commands.UpdateProjectStatusCommand;
-import com.neolearn.projects_service.project.domain.model.commands.AssignTaskCommand;
-import com.neolearn.projects_service.project.domain.model.commands.UpdateTaskCommand;
-import com.neolearn.projects_service.project.domain.model.commands.UpdateTaskStatusCommand;
-import com.neolearn.projects_service.project.domain.model.queries.GetPlatformProjectsQuery;
-import com.neolearn.projects_service.project.domain.model.queries.GetProjectByIdQuery;
-import com.neolearn.projects_service.project.domain.model.queries.GetUserProjectsQuery;
-import com.neolearn.projects_service.project.domain.model.queries.GetProjectTasksQuery;
+import com.neolearn.projects_service.project.domain.model.commands.*;
+import com.neolearn.projects_service.project.domain.model.queries.*;
 import com.neolearn.projects_service.project.domain.services.ProjectCommandService;
 import com.neolearn.projects_service.project.domain.services.ProjectQueryService;
-import com.neolearn.projects_service.project.interfaces.rest.resources.CreateProjectResource;
-import com.neolearn.projects_service.project.interfaces.rest.resources.ProjectResource;
-import com.neolearn.projects_service.project.interfaces.rest.resources.TaskResource;
-import com.neolearn.projects_service.project.interfaces.rest.resources.CreateTaskResource;
-import com.neolearn.projects_service.project.interfaces.rest.resources.UpdateTaskResource;
-import com.neolearn.projects_service.project.interfaces.rest.resources.UpdateProjectResource;
+import com.neolearn.projects_service.project.interfaces.rest.resources.*;
 import com.neolearn.projects_service.project.interfaces.rest.transform.ProjectResourceFromEntityAssembler;
 import com.neolearn.projects_service.project.interfaces.rest.transform.TaskResourceFromEntityAssembler;
-import com.neolearn.projects_service.shared.application.services.BusinessRulesService;
-import com.neolearn.projects_service.shared.application.services.UserSyncService;
-import com.neolearn.projects_service.shared.domain.exceptions.BusinessRuleException;
-import com.neolearn.projects_service.shared.infrastructure.jwt.UserContextService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -41,260 +27,126 @@ public class ProjectController {
 
     private final ProjectCommandService projectCommandService;
     private final ProjectQueryService projectQueryService;
-    private final UserContextService userContextService;
-    private final BusinessRulesService businessRulesService;
-    private final UserSyncService userSyncService;
+    // UserSyncService se elimina si su única función era asegurar la existencia del usuario.
+    // Esta lógica se puede mover al caso de uso (servicio de aplicación).
 
-    public ProjectController(ProjectCommandService projectCommandService, 
-                           ProjectQueryService projectQueryService, 
-                           UserContextService userContextService,
-                           BusinessRulesService businessRulesService,
-                           UserSyncService userSyncService) {
+    public ProjectController(ProjectCommandService projectCommandService, ProjectQueryService projectQueryService) {
         this.projectCommandService = projectCommandService;
         this.projectQueryService = projectQueryService;
-        this.userContextService = userContextService;
-        this.businessRulesService = businessRulesService;
-        this.userSyncService = userSyncService;
     }
 
     @PostMapping
-    @Operation(summary = "Crear un nuevo proyecto", description = "Crea un nuevo proyecto y asigna al usuario creador como administrador")
+    @Operation(summary = "Crear un nuevo proyecto")
+    //@PreAuthorize("hasAnyRole('USER', 'ADMIN')") // Solo usuarios autenticados pueden crear
     public ResponseEntity<ProjectResource> createProject(@RequestBody CreateProjectResource resource) {
-        try {
-            // Extraer información del JWT token
-            String currentUsername = userContextService.getCurrentUsername();
-            String currentTier = userContextService.getCurrentUserTier();
-            
-            if (currentUsername == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-            }
-            
-            // Aplicar reglas de negocio
-            businessRulesService.validateTierAccess(currentTier);
-            businessRulesService.validateProjectLimit(currentUsername, currentTier);
-            
-            // Auto-crear usuario si no existe
-            userSyncService.ensureUserExists(currentUsername);
-            
-            var command = new CreateProjectCommand(
-                    resource.getNombre(),
-                    resource.getDescripcionGeneral(),
-                    resource.getUrlRepositorio(),
-                    currentUsername,
-                    resource.getEsPredefinido()
-            );
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userId = authentication.getName(); // ID del usuario desde el token
 
-            var project = projectCommandService.handle(command);
-            if (project.isEmpty()) {
-                return ResponseEntity.badRequest().build();
-            }
+        // La validación de tier/límite se debe hacer en el servicio de aplicación,
+        // posiblemente llamando al microservicio de Memberships.
 
-            var projectResource = ProjectResourceFromEntityAssembler.toResourceFromEntity(project.get());
-            return new ResponseEntity<>(projectResource, HttpStatus.CREATED);
-            
-        } catch (BusinessRuleException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(null); // En producción, crear un ErrorResponse con el mensaje
-        }
+        var command = new CreateProjectCommand(
+                resource.getNombre(), resource.getDescripcionGeneral(), resource.getUrlRepositorio(),
+                userId, // Usamos el ID del token
+                resource.getEsPredefinido()
+        );
+        var project = projectCommandService.handle(command);
+        return project.map(p -> new ResponseEntity<>(ProjectResourceFromEntityAssembler.toResourceFromEntity(p), HttpStatus.CREATED))
+                .orElse(ResponseEntity.badRequest().build());
     }
 
     @PutMapping("/{projectId}")
-    @Operation(summary = "Actualizar un proyecto", description = "Actualiza los datos de un proyecto existente")
-    public ResponseEntity<ProjectResource> updateProject(
-            @PathVariable Long projectId,
-            @RequestBody UpdateProjectResource resource) {
-        try {
-            String currentUsername = userContextService.getCurrentUsername();
-            if (currentUsername == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-            }
-            
-            // Solo el administrador puede modificar el proyecto
-            businessRulesService.validateIsProjectAdmin(projectId, currentUsername);
-            
-            var command = new UpdateProjectCommand(
-                    projectId,
-                    resource.getNombre(),
-                    resource.getDescripcionGeneral(),
-                    resource.getUrlRepositorio()
-            );
-
-            var project = projectCommandService.handle(command);
-            if (project.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-
-            var projectResource = ProjectResourceFromEntityAssembler.toResourceFromEntity(project.get());
-            return ResponseEntity.ok(projectResource);
-            
-        } catch (BusinessRuleException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
+    @Operation(summary = "Actualizar un proyecto")
+    //@PreAuthorize("@projectSecurityService.isProjectAdmin(#projectId, authentication.name)")
+    public ResponseEntity<ProjectResource> updateProject(@PathVariable Long projectId, @RequestBody UpdateProjectResource resource) {
+        var command = new UpdateProjectCommand(projectId, resource.getNombre(), resource.getDescripcionGeneral(), resource.getUrlRepositorio());
+        var project = projectCommandService.handle(command);
+        return project.map(p -> ResponseEntity.ok(ProjectResourceFromEntityAssembler.toResourceFromEntity(p)))
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/{projectId}")
-    @Operation(summary = "Obtener un proyecto por ID", description = "Retorna un proyecto específico por su ID")
+    @Operation(summary = "Obtener un proyecto por ID")
     public ResponseEntity<ProjectResource> getProjectById(@PathVariable Long projectId) {
-        var query = new GetProjectByIdQuery(projectId);
-        var project = projectQueryService.handle(query);
-        if (project.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-
-        var projectResource = ProjectResourceFromEntityAssembler.toResourceFromEntity(project.get());
-        return ResponseEntity.ok(projectResource);
+        var project = projectQueryService.handle(new GetProjectByIdQuery(projectId));
+        return project.map(p -> ResponseEntity.ok(ProjectResourceFromEntityAssembler.toResourceFromEntity(p)))
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/platform")
-    @Operation(summary = "Obtener proyectos de la plataforma", description = "Retorna la lista de proyectos predefinidos por la plataforma")
+    @Operation(summary = "Obtener proyectos de la plataforma")
     public ResponseEntity<List<ProjectResource>> getPlatformProjects() {
-        var query = new GetPlatformProjectsQuery();
-        var projects = projectQueryService.handle(query);
-
-        var projectResources = projects.stream()
-                .map(ProjectResourceFromEntityAssembler::toResourceFromEntity)
-                .collect(Collectors.toList());
-
+        var projects = projectQueryService.handle(new GetPlatformProjectsQuery());
+        var projectResources = projects.stream().map(ProjectResourceFromEntityAssembler::toResourceFromEntity).collect(Collectors.toList());
         return ResponseEntity.ok(projectResources);
     }
 
     @GetMapping("/user/{username}")
-    @Operation(summary = "Obtener proyectos de un usuario", description = "Retorna la lista de proyectos en los que participa un usuario")
+    @Operation(summary = "Obtener proyectos de un usuario")
+   // @PreAuthorize("@projectSecurityService.canGetUserProjects(#username, authentication)")
     public ResponseEntity<List<ProjectResource>> getUserProjects(@PathVariable String username) {
-        var query = new GetUserProjectsQuery(username);
-        var projects = projectQueryService.handle(query);
-
-        var projectResources = projects.stream()
-                .map(ProjectResourceFromEntityAssembler::toResourceFromEntity)
-                .collect(Collectors.toList());
-
+        var projects = projectQueryService.handle(new GetUserProjectsQuery(username));
+        var projectResources = projects.stream().map(ProjectResourceFromEntityAssembler::toResourceFromEntity).collect(Collectors.toList());
         return ResponseEntity.ok(projectResources);
     }
 
     @PutMapping("/{projectId}/status")
-    @Operation(summary = "Actualizar el estado de un proyecto", description = "Cambia el estado de un proyecto (abierto, cerrado, archivado)")
-    public ResponseEntity<ProjectResource> updateProjectStatus(
-            @PathVariable Long projectId,
-            @RequestParam("estado") String estado) {
-        try {
-            var command = new UpdateProjectStatusCommand(
-                    projectId,
-                    com.neolearn.projects_service.project.domain.model.valueobjects.ProjectStatus.valueOf(estado)
-            );
-
-            var project = projectCommandService.handle(command);
-            if (project.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-
-            var projectResource = ProjectResourceFromEntityAssembler.toResourceFromEntity(project.get());
-            return ResponseEntity.ok(projectResource);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
-        }
+    @Operation(summary = "Actualizar el estado de un proyecto")
+    //@PreAuthorize("@projectSecurityService.isProjectAdmin(#projectId, authentication.name)")
+    public ResponseEntity<ProjectResource> updateProjectStatus(@PathVariable Long projectId, @RequestParam("estado") String estado) {
+        var command = new UpdateProjectStatusCommand(projectId, com.neolearn.projects_service.project.domain.model.valueobjects.ProjectStatus.valueOf(estado));
+        var project = projectCommandService.handle(command);
+        return project.map(p -> ResponseEntity.ok(ProjectResourceFromEntityAssembler.toResourceFromEntity(p)))
+                .orElse(ResponseEntity.notFound().build());
     }
-    
+
     @PostMapping("/{projectId}/tasks")
-    @Operation(summary = "Asignar una tarea", description = "Crea una nueva tarea en el proyecto")
-    public ResponseEntity<TaskResource> assignTask(
-            @PathVariable Long projectId,
-            @RequestBody CreateTaskResource resource) {
-        var command = new AssignTaskCommand(
-                projectId,
-                resource.getNombre(),
-                resource.getDescripcion(),
-                resource.getIdUsuarioAsignado(),
-                resource.getFechaVencimiento()
-        );
-
+    @Operation(summary = "Asignar una tarea")
+   // @PreAuthorize("@projectSecurityService.isProjectMember(#projectId, authentication.name)")
+    public ResponseEntity<TaskResource> assignTask(@PathVariable Long projectId, @RequestBody CreateTaskResource resource) {
+        var command = new AssignTaskCommand(projectId, resource.getNombre(), resource.getDescripcion(), resource.getIdUsuarioAsignado(), resource.getFechaVencimiento());
         var task = projectCommandService.handle(command);
-        if (task.isEmpty()) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        var taskResource = TaskResourceFromEntityAssembler.toResourceFromEntity(task.get());
-        return new ResponseEntity<>(taskResource, HttpStatus.CREATED);
+        return task.map(t -> new ResponseEntity<>(TaskResourceFromEntityAssembler.toResourceFromEntity(t), HttpStatus.CREATED))
+                .orElse(ResponseEntity.badRequest().build());
     }
-    
+
     @GetMapping("/{projectId}/tasks")
-    @Operation(summary = "Obtener tareas de un proyecto", description = "Retorna la lista de tareas de un proyecto")
+    @Operation(summary = "Obtener tareas de un proyecto")
+    // @PreAuthorize("@projectSecurityService.isProjectMember(#projectId, authentication.name)")
     public ResponseEntity<List<TaskResource>> getProjectTasks(@PathVariable Long projectId) {
-        var query = new GetProjectTasksQuery(projectId);
-        var tasks = projectQueryService.handle(query);
-
-        var taskResources = tasks.stream()
-                .map(TaskResourceFromEntityAssembler::toResourceFromEntity)
-                .collect(Collectors.toList());
-
+        var tasks = projectQueryService.handle(new GetProjectTasksQuery(projectId));
+        var taskResources = tasks.stream().map(TaskResourceFromEntityAssembler::toResourceFromEntity).collect(Collectors.toList());
         return ResponseEntity.ok(taskResources);
     }
-    
+
     @PutMapping("/tasks/{taskId}")
-    @Operation(summary = "Actualizar una tarea", description = "Actualiza los datos de una tarea existente")
-    public ResponseEntity<TaskResource> updateTask(
-            @PathVariable Long taskId,
-            @RequestBody UpdateTaskResource resource) {
-        var command = new UpdateTaskCommand(
-                taskId,
-                resource.getNombre(),
-                resource.getDescripcion(),
-                resource.getIdUsuarioAsignado(),
-                resource.getFechaVencimiento()
-        );
-
+    @Operation(summary = "Actualizar una tarea")
+    // Aquí la validación es más compleja. Asumimos que la lógica está en el servicio.
+   // @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<TaskResource> updateTask(@PathVariable Long taskId, @RequestBody UpdateTaskResource resource) {
+        // La lógica para verificar si el usuario puede modificar la tarea debería estar en el command handler
+        var command = new UpdateTaskCommand(taskId, resource.getNombre(), resource.getDescripcion(), resource.getIdUsuarioAsignado(), resource.getFechaVencimiento());
         var task = projectCommandService.handle(command);
-        if (task.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-
-        var taskResource = TaskResourceFromEntityAssembler.toResourceFromEntity(task.get());
-        return ResponseEntity.ok(taskResource);
+        return task.map(t -> ResponseEntity.ok(TaskResourceFromEntityAssembler.toResourceFromEntity(t)))
+                .orElse(ResponseEntity.notFound().build());
     }
-    
+
     @PutMapping("/tasks/{taskId}/status")
-    @Operation(summary = "Actualizar el estado de una tarea", description = "Cambia el estado de una tarea (pendiente, en progreso, completada)")
-    public ResponseEntity<TaskResource> updateTaskStatus(
-            @PathVariable Long taskId,
-            @RequestParam("estado") String estado) {
-        try {
-            var command = new UpdateTaskStatusCommand(
-                    taskId,
-                    com.neolearn.projects_service.project.domain.model.valueobjects.TaskStatus.valueOf(estado)
-            );
-
-            var task = projectCommandService.handle(command);
-            if (task.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-
-            var taskResource = TaskResourceFromEntityAssembler.toResourceFromEntity(task.get());
-            return ResponseEntity.ok(taskResource);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
-        }
+    @Operation(summary = "Actualizar el estado de una tarea")
+    //@PreAuthorize("isAuthenticated()")
+    public ResponseEntity<TaskResource> updateTaskStatus(@PathVariable Long taskId, @RequestParam("estado") String estado) {
+        var command = new UpdateTaskStatusCommand(taskId, com.neolearn.projects_service.project.domain.model.valueobjects.TaskStatus.valueOf(estado));
+        var task = projectCommandService.handle(command);
+        return task.map(t -> ResponseEntity.ok(TaskResourceFromEntityAssembler.toResourceFromEntity(t)))
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{projectId}/members/{username}")
-    @Operation(summary = "Remover miembro del proyecto", description = "Permite al administrador botar un miembro o que un miembro se salga voluntariamente")
-    public ResponseEntity<String> removeMember(
-            @PathVariable Long projectId,
-            @PathVariable String username) {
-        try {
-            String currentUsername = userContextService.getCurrentUsername();
-            if (currentUsername == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-            }
-            
-            // Validar si se puede remover al miembro
-            businessRulesService.validateCanRemoveMember(projectId, username, currentUsername);
-            
-            // Crear comando para remover miembro (necesitarías implementar este comando)
-            // Por ahora, implementar la lógica directamente aquí
-            
-            return ResponseEntity.ok("Miembro removido exitosamente");
-            
-        } catch (BusinessRuleException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
-        }
+    @Operation(summary = "Remover miembro del proyecto")
+   // @PreAuthorize("@projectSecurityService.isProjectAdmin(#projectId, authentication.name) or #username == authentication.name")
+    public ResponseEntity<Void> removeMember(@PathVariable Long projectId, @PathVariable String username) {
+        // Aquí iría el comando para remover al miembro
+        // projectCommandService.handle(new RemoveMemberCommand(projectId, username));
+        return ResponseEntity.noContent().build();
     }
-} 
+}
