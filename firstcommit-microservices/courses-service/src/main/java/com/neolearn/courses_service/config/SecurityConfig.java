@@ -1,4 +1,4 @@
-package com.neolearn.courses_service.config; // Asegúrate que el paquete sea el correcto
+/*package com.neolearn.courses_service.config; // Asegúrate que el paquete sea el correcto
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,4 +26,4 @@ public class SecurityConfig {
 
         return http.build();
     }
-}
+}*/

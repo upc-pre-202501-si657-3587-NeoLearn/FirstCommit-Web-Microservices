@@ -1,6 +1,6 @@
 package com.neolearn.courses_service.config;
 
-import org.springframework.core.convert.converter.Converter;
+/*import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -22,4 +22,4 @@ public class KeycloakRealmRoleConverter implements Converter<Jwt, Collection<Gra
                 .map(role -> new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()))
                 .collect(Collectors.toList());
     }
-}
+}*/
