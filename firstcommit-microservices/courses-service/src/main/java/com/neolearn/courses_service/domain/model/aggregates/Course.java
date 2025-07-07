@@ -86,9 +86,35 @@ public class Course extends AbstractAggregateRoot<Course> {
                 .orElse(0.0);
     }
 
+    // En Course.java
     public boolean isUserEnrolled(String userId) {
-        return !this.enrolledStudents.contains(userId);
+        // La versión original tenía un '!', lo que invertía la lógica.
+        return this.enrolledStudents.contains(userId);
     }
 
 
+    public void updateUserProgress(String userId, int newPercentage, String lastContentId) {
+        // Buscamos el progreso del usuario dentro de la lista que ya tiene el curso
+        UserProgress userProgress = this.userProgresses.stream()
+                .filter(progress -> progress.getUserId().equals(userId))
+                .findFirst()
+                // Si no existe, creamos uno nuevo y lo añadimos a la lista
+                .orElseGet(() -> {
+                    UserProgress newProgress = new UserProgress(this, userId);
+                    this.userProgresses.add(newProgress);
+                    return newProgress;
+                });
+
+        // Llamamos al método de actualización en la entidad UserProgress
+        userProgress.updateProgress(newPercentage, lastContentId);
+    }
+    public int getTotalContentItemsCount() {
+        // Suponiendo que tu CourseContent tiene métodos para acceder a los contenidos.
+        // Aquí debes implementar la lógica para contar todos los videos, quizzes, etc.
+        // Ejemplo:
+        int theoryCount = this.getContent().getTheoryItemsCount(); // Necesitarías implementar esto
+        int quizCount = this.getContent().getQuizItemsCount();     // Necesitarías implementar esto
+        int codingCount = this.getContent().getCodingItemsCount(); // Necesitarías implementar esto
+        return theoryCount + quizCount + codingCount;
+    }
 }

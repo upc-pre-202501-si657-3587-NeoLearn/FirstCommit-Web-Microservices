@@ -1,6 +1,7 @@
 package com.neolearn.courses_service.application.internal.queryservices;
 
 import com.neolearn.courses_service.domain.model.aggregates.Course;
+import com.neolearn.courses_service.domain.model.entities.UserProgress;
 import com.neolearn.courses_service.domain.model.queries.*;
 import com.neolearn.courses_service.domain.services.ICourseQueryService;
 import com.neolearn.courses_service.infrastructure.persistence.jpa.repositories.CourseRepository;
@@ -50,26 +51,35 @@ public class CourseQueryService implements ICourseQueryService {
         return courseRepository.findCoursesByEnrolledUser(query.userId());
     }
 
-    @Override
-    public CourseDetailsResource handle(GetCourseDetailsQuery query) {
-        if (query.courseId() == null || query.courseId() <= 0) {
-            throw new IllegalArgumentException("Invalid course ID");
+    private Integer findUserProgressPercentage(Course course, String userId) {
+        if (userId == null || userId.isBlank()) {
+            return null; // O 0, dependiendo de lo que prefiera la UI. 'null' es más explícito.
         }
 
-        // 1. Obtener el curso. Si no existe, lanzar excepción.
+        // OPTIMIZACIÓN: Buscamos en la colección que ya ha sido cargada con el curso
+        // si la relación es EAGER, o si la sesión de Hibernate está abierta.
+        return course.getUserProgresses().stream()
+                .filter(progress -> progress.getUserId().equals(userId))
+                .findFirst()
+                .map(UserProgress::getPercentageCompleted)
+                .orElse(0); // Devuelve 0 si el usuario está inscrito pero no ha empezado.
+    }
+
+    @Override
+    public CourseDetailsResource handle(GetCourseDetailsQuery query) {
+        // La validación de la query puede vivir en su propio constructor de record
+        // if (query.courseId() == null || query.courseId() <= 0) ...
+
+        // 1. Obtener el curso. Si no existe, lanzar una excepción clara.
+        //    Esto evita tener que manejar 'Optional' en el resto del método.
         Course course = courseRepository.findById(query.courseId())
                 .orElseThrow(() -> new IllegalArgumentException("Course not found with id: " + query.courseId()));
 
-        // 2. Obtener el progreso del usuario (si se proporcionó un userId)
-        Integer progress = null;
-        if (query.userId() != null && !query.userId().isBlank()) {
-            // Usamos el nuevo repositorio para obtener el progreso.
-            progress = userProgressRepository.findByCourseIdAndUserId(query.courseId(), query.userId())
-                    .map(userProgress -> userProgress.getProgress()) // Extraemos el valor int del progreso
-                    .orElse(null); // Si no hay registro, el progreso es nulo
-        }
+        // 2. Obtener el progreso del usuario de forma más limpia.
+        //    La lógica para obtener el progreso se encapsula en un método privado.
+        Integer userProgressPercentage = findUserProgressPercentage(course, query.userId());
 
-        // 3. Ensamblar el recurso de detalles
+        // 3. Ensamblar el DTO. El código se vuelve más legible.
         return new CourseDetailsResource(
                 course.getId(),
                 course.getTitle(),
@@ -79,8 +89,8 @@ public class CourseQueryService implements ICourseQueryService {
                 course.getImageUrl(),
                 course.isPublished(),
                 course.getAverageRating(),
-                progress, // Usamos la variable de progreso obtenida
-                new CourseContentResource(
+                userProgressPercentage, // Progreso obtenido
+                new CourseContentResource( // Ensamblaje del contenido
                         course.getContent().getTheoryContent(),
                         course.getContent().getQuizContent(),
                         course.getContent().getCodingContent()
@@ -90,15 +100,8 @@ public class CourseQueryService implements ICourseQueryService {
 
     @Override
     public Optional<Integer> handle(GetUserProgressQuery query) {
-        if (query.courseId() == null || query.courseId() <= 0) {
-            throw new IllegalArgumentException("Invalid course ID");
-        }
-        if (query.userId() == null || query.userId().isBlank()) {
-            throw new IllegalArgumentException("Invalid user ID");
-        }
-
-        // CORRECCIÓN: Usamos el UserProgressRepository directamente. Es mucho más eficiente.
+        // Esta implementación ya es eficiente y correcta.
         return userProgressRepository.findByCourseIdAndUserId(query.courseId(), query.userId())
-                .map(userProgress -> userProgress.getProgress()); // Mapeamos el Optional<UserProgress> a Optional<Integer>
+                .map(UserProgress::getPercentageCompleted); // Asumiendo que el método getter se llama así
     }
 }

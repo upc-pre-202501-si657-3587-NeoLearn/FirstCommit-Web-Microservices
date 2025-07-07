@@ -11,5 +11,7 @@ public interface ICourseCommandService {
     void handle(PublishCourseCommand command);
     void handle(EnrollCourseCommand command);
     void handle(RateCourseCommand command);
-    void handle(UpdateProgressCommand command); // Añadido
+    void handle(UpdateProgressCommand command);
+    void handle(DeleteCourseCommand command);
+
 }

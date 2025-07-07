@@ -6,30 +6,46 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 @Entity
-@Table(name = "user_progress") // Nombre de tabla explícito y limpio
-@IdClass(UserProgressId.class) // Usamos la clase para la clave compuesta
 @Getter
 public class UserProgress {
 
     @Id
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "course_id")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY) // Relación con el curso
+    @JoinColumn(name = "course_id", nullable = false)
     private Course course;
 
-    @Id
-    @Column(name = "user_id")
+    @Column(nullable = false)
     private String userId;
 
-    @Setter
-    @Column(name = "progress")
-    private int progress; // entre 0 y 100
+    private int percentageCompleted;
+    private String lastContentId;
+    private LocalDateTime lastUpdated;
 
     protected UserProgress() {}
 
     public UserProgress(Course course, String userId) {
         this.course = course;
         this.userId = userId;
-        this.progress = 0; // Progreso inicial
+        this.percentageCompleted = 0;
+        this.lastUpdated = LocalDateTime.now();
+    }
+
+    // Dentro de la clase UserProgress.java
+
+    public void updateProgress(int newPercentage, String newLastContentId) {
+        // Validación de negocio (opcional pero bueno)
+        if (newPercentage < 0 || newPercentage > 100) {
+            throw new IllegalArgumentException("El porcentaje de progreso debe estar entre 0 y 100.");
+        }
+
+        this.percentageCompleted = newPercentage;
+        this.lastContentId = newLastContentId;
+        this.lastUpdated = LocalDateTime.now(); // Suponiendo que tienes este campo
     }
 }

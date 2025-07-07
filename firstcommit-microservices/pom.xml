@@ -41,6 +41,7 @@
 		<module>projects-service</module>
 		<module>roadmaps-service</module>
 		<module>discovery-server</module>
+		<module>common-events</module>
 	</modules>
 	<dependencies>
 

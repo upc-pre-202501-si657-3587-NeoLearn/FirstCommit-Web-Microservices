@@ -10,4 +10,5 @@ public interface RoadmapCommandService {
     void handle(RemoveCourseFromRoadmapCommand command);
     void handle(DeleteRoadmapCommand command);
     void handle(UpdateRoadmapDetailsCommand command);
+    void handle(RegisterAvailableCourseCommand command);
 }

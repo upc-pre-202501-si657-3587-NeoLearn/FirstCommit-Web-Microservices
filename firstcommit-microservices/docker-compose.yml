@@ -1,6 +1,5 @@
 # La 'version' es obsoleta en las versiones modernas de Docker Compose.
 # Se puede eliminar de forma segura.
-version: '3.8'
 
 services:
   # ======================================================
@@ -111,6 +110,8 @@ services:
         condition: service_healthy
       discovery-server:
         condition: service_started
+      rabbitmq:
+        condition: service_started
     networks:
       - neolearn-network
     environment:
@@ -129,6 +130,8 @@ services:
       db-courses:
         condition: service_healthy
       discovery-server:
+        condition: service_started
+      rabbitmq:
         condition: service_started
     networks:
       - neolearn-network
@@ -149,6 +152,8 @@ services:
         condition: service_healthy
       discovery-server:
         condition: service_started
+      rabbitmq:
+        condition: service_started
     networks:
       - neolearn-network
     environment:
@@ -168,6 +173,8 @@ services:
         condition: service_healthy
       discovery-server:
         condition: service_started
+      rabbitmq:
+        condition: service_started
     networks:
       - neolearn-network
     environment:
@@ -186,6 +193,8 @@ services:
       db-membership:
         condition: service_healthy
       discovery-server:
+        condition: service_started
+      rabbitmq:
         condition: service_started
     networks:
       - neolearn-network
@@ -247,6 +256,19 @@ services:
     # Comando para iniciar Keycloak
     command:
       - start-dev
+
+  rabbitmq:
+    image: rabbitmq:3.11-management # La imagen con '-management' incluye una UI web muy útil
+    container_name: rabbitmq
+    hostname: rabbitmq
+    ports:
+      - "5672:5672"   # Puerto para la comunicación AMQP de los servicios
+      - "15672:15672" # Puerto para la interfaz de gestión web
+    environment:
+      - RABBITMQ_DEFAULT_USER=user
+      - RABBITMQ_DEFAULT_PASS=password
+    networks:
+      - neolearn-network
 # ======================================================
 #           RED COMÚN
 # ======================================================

@@ -46,6 +46,20 @@ public class RoadmapCommandServiceImpl implements RoadmapCommandService {
     }
 
     @Override
+    @Transactional // Es una operación de escritura, así que es transaccional
+    public void handle(RegisterAvailableCourseCommand command) {
+        // Aquí es donde pondrías la lógica de negocio real.
+        // Por ejemplo, podrías tener una entidad `AvailableCourse` en este
+        // microservicio para llevar un registro de los cursos que se pueden añadir.
+
+        // AvailableCourse availableCourse = new AvailableCourse(command.externalCourseId(), command.title());
+        // availableCourseRepository.save(availableCourse);
+
+        // Por ahora, solo registraremos que el comando fue manejado.
+        System.out.println("Handled RegisterAvailableCourseCommand for course ID: " + command.externalCourseId() + " with title: " + command.title());
+    }
+
+    @Override
     @Transactional
     public void handle(RemoveCourseFromRoadmapCommand command) {
         var roadmapId = RoadmapId.from(command.roadmapId());
