@@ -1,5 +1,3 @@
-# Dockerfile para discovery-server
-
 # Usa una imagen base oficial de Java.
 # Se recomienda usar la misma versión para todos los servicios (ej. openjdk:21-slim)
 FROM openjdk:21-slim

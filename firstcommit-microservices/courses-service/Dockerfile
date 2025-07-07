@@ -1,6 +1,3 @@
-
-
-
 # Usa una imagen base oficial de Java. Asegúrate de que coincida con la versión con la que compilas.
 FROM openjdk:21-slim
 
