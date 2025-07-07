@@ -1,0 +1,67 @@
+# application.yml de gateway-server
+
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gateway-server
+  cloud:
+    gateway:
+      # --- AÑADIR ESTA SECCIÓN DE RUTAS EXPLÍCITAS ---
+      routes:
+        - id: projects-service-route # Un nombre único para la ruta
+          uri: lb://projects-service  # "lb" significa Load Balancer, usará Eureka para encontrar el servicio
+          predicates:
+            - Path=/projects-service/** # Si la petición empieza con /projects-service/...
+          filters:
+            # Re-escribe la URL, quitando el prefijo del nombre del servicio.
+            # /projects-service/api/v1/projects -> /api/v1/projects
+            - StripPrefix=1
+
+        # Repite el patrón para los otros servicios
+        - id: courses-service-route
+          uri: lb://courses-service
+          predicates:
+            - Path=/courses-service/**
+          filters:
+            - StripPrefix=1
+
+        - id: iam-service-route
+          uri: lb://iam-service
+          predicates:
+            - Path=/iam-service/**
+          filters:
+            - StripPrefix=1
+
+        - id: membership-service-route
+          uri: lb://membership-service
+          predicates:
+            - Path=/membership-service/**
+          filters:
+            - StripPrefix=1
+
+        - id: roadmaps-service-route
+          uri: lb://roadmaps-service
+          predicates:
+            - Path=/roadmaps-service/**
+          filters:
+            - StripPrefix=1
+      server:
+        webflux:
+          discovery:
+            locator:
+              lower-case-service-id: true
+              enabled: true
+
+
+ # security:
+  #  oauth2:
+   #   resourceserver:
+    #    jwt:
+     #     issuer-uri: http://localhost:9090/realms/neolearn
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://discovery-server:8761/eureka/

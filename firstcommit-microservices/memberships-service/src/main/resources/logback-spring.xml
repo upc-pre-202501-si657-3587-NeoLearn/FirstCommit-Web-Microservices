@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <springProperty scope="context" name="springAppName" source="spring.application.name" defaultValue="projects-service"/>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <!-- Formato de log preparado para trazabilidad (traceId, spanId) -->
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [${springAppName}] [%thread] %-5level %logger{36} - [%X{traceId:-},%X{spanId:-}] - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+
+    <!-- Para evitar logs demasiado verbosos de Hibernate -->
+    <logger name="org.hibernate" level="INFO"/>
+    <logger name="org.springframework.web" level="INFO"/>
+
+</configuration>

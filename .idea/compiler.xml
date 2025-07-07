@@ -2,10 +2,33 @@
 <project version="4">
   <component name="CompilerConfiguration">
     <annotationProcessing>
+      <profile default="true" name="Default" enabled="true" />
       <profile name="Maven default annotation processors profile" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
+        <module name="common-events" />
+        <module name="discovery-server" />
+      </profile>
+      <profile name="Annotation profile for projects-service" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.32/lombok-1.18.32.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/springframework/boot/spring-boot-configuration-processor/3.5.0/spring-boot-configuration-processor-3.5.0.jar" />
+        </processorPath>
+        <module name="projects-service" />
+      </profile>
+      <profile name="Annotation profile for roadmaps-service" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.32/lombok-1.18.32.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/springframework/boot/spring-boot-configuration-processor/3.5.0/spring-boot-configuration-processor-3.5.0.jar" />
+        </processorPath>
+        <module name="roadmaps-service" />
       </profile>
       <profile name="Annotation profile for microservices" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
@@ -17,15 +40,21 @@
         </processorPath>
         <module name="iam-service" />
         <module name="memberships-service" />
-        <module name="projects-service" />
-        <module name="roadmaps-service" />
+        <module name="gateway-server" />
         <module name="courses-service" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="api-gateway" target="21" />
+      <module name="firstcommit-microservices" target="21" />
+    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="api-gateway" options="-parameters" />
       <module name="courses-service" options="-parameters" />
+      <module name="discovery-server" options="-parameters" />
+      <module name="gateway-server" options="-parameters" />
       <module name="iam-service" options="-parameters" />
       <module name="memberships-service" options="-parameters" />
       <module name="projects-service" options="-parameters" />
